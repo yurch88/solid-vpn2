@@ -35,8 +35,8 @@ services:
       - wireguard
     environment:
       - WG_CONFIG_DIR=/etc/wireguard
-      - FLASK_SECRET_KEY=${flask_secret_key}
-      - FLASK_LOGIN_PASSWORD=${flask_login_password}
+      - FLASK_SECRET_KEY=${wg_admin_password}
+      - FLASK_LOGIN_PASSWORD=${wg_admin_password}
     volumes:
       - /etc/wireguard:/etc/wireguard:rw
     ports:
