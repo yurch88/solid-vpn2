@@ -1,38 +1,35 @@
-FROM lscr.io/linuxserver/wireguard:latest
+# Используем легковесный базовый образ с Python
+FROM python:3.11-slim
 
-RUN apk update && apk add --no-cache \
-    python3 \
-    py3-pip \
-    wireguard-tools \
-    bash \
-    dpkg \
+# Установка необходимых пакетов
+RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \
-    iptables \
-    iptables-legacy
+    bash && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN update-alternatives --install /sbin/iptables iptables /sbin/iptables-legacy 10 \
-    --slave /sbin/iptables-restore iptables-restore /sbin/iptables-legacy-restore \
-    --slave /sbin/iptables-save iptables-save /sbin/iptables-legacy-save
-
+# Копирование приложения и зависимостей
 COPY app.py /app/app.py
 COPY requirements.txt /app/requirements.txt
 COPY templates/ /app/templates/
 COPY static/ /app/static/
 COPY entrypoint.sh /entrypoint.sh
 
+# Разрешения для запуска entrypoint
 RUN chmod +x /entrypoint.sh
 
+# Установка зависимостей Python в виртуальном окружении
 RUN python3 -m venv /app/venv && \
     /app/venv/bin/pip install --no-cache-dir -r /app/requirements.txt
 
+# Установка рабочей директории
 WORKDIR /app
 
+# Открытие порта для Dashboard
 EXPOSE 80
-EXPOSE 51820/udp
 
-HEALTHCHECK CMD /usr/bin/timeout 5s /bin/sh -c "/usr/bin/wg show | /bin/grep -q interface || exit 1" \
-    --interval=1m \
-    --timeout=5s \
-    --retries=3
+# HEALTHCHECK (проверяем, что приложение отвечает на HTTP-запросы)
+HEALTHCHECK CMD curl --fail http://localhost:80/ || exit 1
 
+# Запуск через entrypoint
 ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint.sh"]
